@@ -4,9 +4,9 @@
 		"json": 2
 	},
 	"project": {
-		"name": "vexRobot",
+		"name": "VexOverride",
 		"description": "",
-		"creationDate": "10/14/2026, 11:52:10 AM",
+		"creationDate": "11/5/2026, 8:38:23 AM",
 		"platform": "V5",
 		"language": "cpp",
 		"slot": 1,
