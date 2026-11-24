@@ -272,11 +272,29 @@ void pre_auton(void) {
 
 
 //Autonomous mode
+const double Wheel_Diameter = 4.0;          //for the inches of diameter of our drivetrain wheels
+const double Gear_Ratio = 48.0/36.0;        // wheel 48 motor 36 ratio
+double inchesToDegrees(double inches){
+  return inches/(Wheel_Diameter *3.14159265358)*360.0 * Gear_Ratio;         //wheel to motor
+}
+void driveInches(double inches, int speed){
+  double deg = inchesToDegrees (inches);
+  leftDrive.resetPosition();
+  rightDrive.resetPosition();
+  leftDrive.spinFor(forward, deg, degress, speed, velocityUnits::pct,false);
+  rightDrive.spinFor(forward, deg, degress, speed, velocityUnits::pct);
+  
+}
 
 void autonomous(void) {
   // ..........................................................................
   // Insert autonomous user code here.
-
+  leftDrive.setStopping(brake);
+  rightDrive.setStopping(brake);
+  driveInches(24.0, 50);                     //example
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("L:%.0f R:%.0f", leftDrive.position(degrees), rightDrive.position(degrees) );            //display the degree spinned 
   
   // ..........................................................................
 }
