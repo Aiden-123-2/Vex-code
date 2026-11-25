@@ -15,21 +15,22 @@ int drivePower = 100;
 
 motor intakeMotor(PORT15);
 
-motor armMotor(PORT16);     
+motor armMotor(PORT16);
 bool armExtended = false;      //tracks if the arm is extended or not
 int armPower = 60;
 
 motor clawMotor(PORT17, true);
 bool clawOpen = false;          //tracks if the claw is open or not
 
-motor lift_left(PORT18, true);
-motor lift_right(PORT19);
-motor_group liftMotors = {lift_left, lift_right};
+motor liftLeft(PORT18, true);
+motor liftRight(PORT19);
+motor_group liftMotors = {liftLeft, liftRight};
 int liftPower = 80;       //power to run the lift motors at
+const int liftMaxHeight = 1350;
 
-motor monitored_motors[] = {leftFront, leftBack, rightFront, rightBack, intakeMotor, armMotor, clawMotor, lift_left, lift_right};  //array of motors to be monitored for overheating
+motor monitoredMotors[] = {leftFront, leftBack, rightFront, rightBack, intakeMotor, armMotor, clawMotor, liftLeft, liftRight};  //array of motors to be monitored for overheating
 
-int motorCount = sizeof(monitored_motors) / sizeof(monitored_motors[0]);  //number of motors to be monitored for overheating
+int motorCount = sizeof(monitoredMotors) / sizeof(monitoredMotors[0]);  //number of motors to be monitored for overheating
 
 char lastBuffer[64] = "";  //buffer to store the last temperature readings to prevent spamming the controller screen with the same message
 int selected = 1;
@@ -161,7 +162,7 @@ void monitorMotorTemps() {
   char motorTemp[8] = "";
 
   for (int i = 0; i < motorCount; i++) {
-    double temp = monitored_motors[i].temperature(celsius);  //get the temperature of the motor in celsius
+    double temp = monitoredMotors[i].temperature(celsius);  //get the temperature of the motor in celsius
       snprintf(motorTemp, sizeof(motorTemp), "%d° ", (int)temp);  //convert the temperature to a string
       strcat(buffer, motorTemp);
   }
@@ -235,7 +236,9 @@ void displayScreen() {
 // A global instance of the competition
 competition Competition;
 
-//Setup code
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*---------------------------------------------------------------------------*/
 
 void pre_auton(void) {
   clawMotor.spin(reverse, 50, percent);
@@ -269,7 +272,9 @@ void pre_auton(void) {
 }
 
 
-//Autonomous mode
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
   // ..........................................................................
@@ -278,7 +283,9 @@ void autonomous(void) {
 }
 
 
-//User controls
+/*---------------------------------------------------------------------------*/
+/*                              User Control Task                            */
+/*---------------------------------------------------------------------------*/
 
 void usercontrol(void) {
   buttonAPressed = false;
@@ -294,11 +301,7 @@ void usercontrol(void) {
   while (true) {
     int forwardSpeed = applyScaling(Controller1.Axis3.position());  // front and backward
     int turnSpeed = applyScaling(Controller1.Axis1.position());     //left and right 
-    
-    if (forwardSpeed < 0) {
-      turnSpeed *= -1;     //Invert the turn speed when going backwards
-    }
-    
+        
     int leftSpeed = forwardSpeed - turnSpeed;            //calculate the power to use in the left side 
     int rightSpeed = forwardSpeed + turnSpeed;           //calculate the power to use in the right side
 
@@ -324,7 +327,7 @@ void usercontrol(void) {
       }
     }
     else {
-      if ((lift > 0 && abs(liftMotors.position(degrees)) < 1350) || (lift < 0 && abs(liftMotors.position(degrees)) > 0)) {
+      if ((lift > 0 && liftMotors.position(degrees) < liftMaxHeight) || (lift < 0 && liftMotors.position(degrees) > 0)) {
         liftMotors.spin(forward, lift, percent);
         liftWasMoving = true;    //if the lift is moving, set the variable to true
       }
@@ -363,27 +366,16 @@ void usercontrol(void) {
 
     displayScreen();
 
-    wait(20, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
+    wait(20, msec);
   }
 }
 
-//
-// Main will set up the competition functions and callbacks.
-//
 int main() {
-
-  
-  
-  // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
 
-
-  // Run the pre-autonomous function.
   pre_auton();
 
-  // Prevent main from exiting with an infinite loop.
   while (true) {
     wait(100, msec);
   }
