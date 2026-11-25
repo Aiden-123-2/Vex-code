@@ -279,6 +279,13 @@ void pre_auton(void) {
 void autonomous(void) {
   // ..........................................................................
   // Insert autonomous user code here.
+  leftDrive.setStopping(brake);
+  rightDrive.setStopping(brake);
+  driveInches(24.0, 50);                     //example
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("L:%.0f R:%.0f", leftDrive.position(degrees), rightDrive.position(degrees) );            //display the degree spinned 
+  
   // ..........................................................................
 }
 
