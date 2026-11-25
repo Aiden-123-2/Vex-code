@@ -4,10 +4,10 @@ using namespace vex;
 
 //motor and controller setup
 
-motor leftFront(PORT11, false);        //left motors
-motor leftBack(PORT12, false);
-motor rightFront(PORT13, true);      //right motors
-motor rightBack(PORT14, true);      //right motors are reversed because they are on the opposite side of the robot
+motor leftFront(PORT11, ratio18_1 ,false);        //left motors
+motor leftBack(PORT12,  ratio18_1 ,false);
+motor rightFront(PORT13,  ratio18_1 ,true);      //right motors
+motor rightBack(PORT14,  ratio18_1 ,true);      //right motors are reversed because they are on the opposite side of the robot
 
 motor_group leftDrive = {leftFront, leftBack};      //grouped together since motors on the same side should move the same direction
 motor_group rightDrive = {rightFront, rightBack};
@@ -270,7 +270,21 @@ void pre_auton(void) {
   Controller1.Screen.setCursor(3, 1);
   Controller1.Screen.print("Drive Power: %d%%", drivePower);
 }
+ ---- Robot measurements ----
+const double WHEEL_DIAMETER = 3.25;
+const double GEAR_RATIO = 48.0 / 36.0;   // 36 on motor, 48 on wheel
 
+double inchesToDegrees(double inches) {
+  return inches / (WHEEL_DIAMETER * 3.14159) * 360.0 * GEAR_RATIO;
+}
+
+void driveInches(double inches, int speed) {
+  double deg = inchesToDegrees(inches);
+  leftDrive.resetPosition();
+  rightDrive.resetPosition();
+  leftDrive.spinFor(forward, deg, degrees, speed, velocityUnits::pct, false);
+  rightDrive.spinFor(forward, deg, degrees, speed, velocityUnits::pct); 
+}
 
 /*---------------------------------------------------------------------------*/
 /*                          Pre-Autonomous Functions                         */
