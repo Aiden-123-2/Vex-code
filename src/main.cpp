@@ -4,10 +4,10 @@ using namespace vex;
 
 //motor and controller setup
 
-motor leftFront(PORT11, ratio18_1, true);        //left motors
-motor leftBack(PORT12, ratio18_1, true);         //left motors are reversed because they are on the opposite side of the robot
-motor rightFront(PORT13, ratio18_1, false);      //right motors
-motor rightBack(PORT14, ratio18_1, false);
+motor leftFront(PORT11, false);        //left motors
+motor leftBack(PORT12, false);
+motor rightFront(PORT13, true);      //right motors
+motor rightBack(PORT14, true);      //right motors are reversed because they are on the opposite side of the robot
 
 motor_group leftDrive = {leftFront, leftBack};      //grouped together since motors on the same side should move the same direction
 motor_group rightDrive = {rightFront, rightBack};
@@ -15,23 +15,22 @@ int drivePower = 100;
 
 motor intakeMotor(PORT15);
 
-motor armMotor(PORT16);     
+motor armMotor(PORT16);
 bool armExtended = false;      //tracks if the arm is extended or not
 int armPower = 60;
 
 motor clawMotor(PORT17, true);
 bool clawOpen = false;          //tracks if the claw is open or not
 
-motor lift_left(PORT18, true);
-motor lift_right(PORT19);
-int liftPower = 60;       //power to run the lift motors at
+motor liftLeft(PORT18, true);
+motor liftRight(PORT19);
+motor_group liftMotors = {liftLeft, liftRight};
+int liftPower = 80;       //power to run the lift motors at
+const int liftMaxHeight = 1350;
 
-motor monitored_motors[] = {leftFront, leftBack, rightFront, rightBack, intakeMotor, armMotor, clawMotor, lift_left, lift_right};  //array of motors to be monitored for overheating
-const char* motorNames[] = {"LFD", "LBD", "RFD", "RBD", "I", "A", "C", "LL", "LR"};      //names of the motors to be monitored for overheating
+motor monitoredMotors[] = {leftFront, leftBack, rightFront, rightBack, intakeMotor, armMotor, clawMotor, liftLeft, liftRight};  //array of motors to be monitored for overheating
 
-int motorCount = sizeof(monitored_motors) / sizeof(monitored_motors[0]);  //number of motors to be monitored for overheating
-
-motor_group liftMotors = {lift_left, lift_right};
+int motorCount = sizeof(monitoredMotors) / sizeof(monitoredMotors[0]);  //number of motors to be monitored for overheating
 
 char lastBuffer[64] = "";  //buffer to store the last temperature readings to prevent spamming the controller screen with the same message
 int selected = 1;
@@ -108,7 +107,7 @@ void controlMotorSpeeds()  {
 
   else if (Controller1.ButtonUp.pressing()) {
     count++;
-    if (count % 7 == 0) {
+    if (count % 3 == 0) {
       if (selected == 1) liftPower++;
       if (selected == 2) armPower++;
       if (selected == 3) drivePower++;
@@ -125,7 +124,7 @@ void controlMotorSpeeds()  {
   
   else if (Controller1.ButtonDown.pressing()) {
     count++;
-    if (count % 7 == 0) {
+    if (count % 3 == 0) {
       if (selected == 1) liftPower--;
       if (selected == 2) armPower--;
       if (selected == 3) drivePower--;
@@ -163,7 +162,7 @@ void monitorMotorTemps() {
   char motorTemp[8] = "";
 
   for (int i = 0; i < motorCount; i++) {
-    double temp = monitored_motors[i].temperature(celsius);  //get the temperature of the motor in celsius
+    double temp = monitoredMotors[i].temperature(celsius);  //get the temperature of the motor in celsius
       snprintf(motorTemp, sizeof(motorTemp), "%d° ", (int)temp);  //convert the temperature to a string
       strcat(buffer, motorTemp);
   }
@@ -237,19 +236,20 @@ void displayScreen() {
 // A global instance of the competition
 competition Competition;
 
-//Setup code
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*---------------------------------------------------------------------------*/
 
 void pre_auton(void) {
-  clawMotor.setMaxTorque(30, percent);
-  clawMotor.spin(reverse, 10, percent);
+  clawMotor.spin(reverse, 50, percent);
   int timeout = 0;
-  wait(100, msec);  //wait for the claw to start closing
+  wait(100, msec);  //wait for the claw to start closing before checking velocity
 
   while (fabs(clawMotor.velocity(rpm)) > 0.1 && timeout < 100) {    //wait until the claw is fully closed or a timeout of 2 seconds is reached to prevent the robot from getting stuck
     wait(20, msec);  //wait for the claw to fully close
     timeout++;
   }
-  clawMotor.setMaxTorque(40, percent);
+  clawMotor.setMaxTorque(30, percent);
   clawMotor.stop(hold);
   clawMotor.resetPosition();
   clawMotor.setStopping(hold);
@@ -259,6 +259,7 @@ void pre_auton(void) {
   armMotor.setStopping(hold);
   armExtended = false;
 
+  liftMotors.resetPosition();
   liftMotors.setStopping(hold);
 
   Controller1.Screen.clearScreen();
@@ -271,20 +272,9 @@ void pre_auton(void) {
 }
 
 
-//Autonomous mode
-const double Wheel_Diameter = 4.0;          //for the inches of diameter of our drivetrain wheels
-const double Gear_Ratio = 48.0/36.0;        // wheel 48 motor 36 ratio
-double inchesToDegrees(double inches){
-  return inches/(Wheel_Diameter *3.14159265358)*360.0 * Gear_Ratio;         //wheel to motor
-}
-void driveInches(double inches, int speed){
-  double deg = inchesToDegrees (inches);
-  leftDrive.resetPosition();
-  rightDrive.resetPosition();
-  leftDrive.spinFor(forward, deg, degress, speed, velocityUnits::pct,false);
-  rightDrive.spinFor(forward, deg, degress, speed, velocityUnits::pct);
-  
-}
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
   // ..........................................................................
@@ -300,7 +290,9 @@ void autonomous(void) {
 }
 
 
-//User controls
+/*---------------------------------------------------------------------------*/
+/*                              User Control Task                            */
+/*---------------------------------------------------------------------------*/
 
 void usercontrol(void) {
   buttonAPressed = false;
@@ -316,13 +308,9 @@ void usercontrol(void) {
   while (true) {
     int forwardSpeed = applyScaling(Controller1.Axis3.position());  // front and backward
     int turnSpeed = applyScaling(Controller1.Axis1.position());     //left and right 
-    
-    if (forwardSpeed < 0) {
-      turnSpeed *= -1;     //Invert the turn speed when going backwards
-    }
-    
-    int leftSpeed = forwardSpeed + turnSpeed;            //calculate the power to use in the left side 
-    int rightSpeed = forwardSpeed - turnSpeed;           //calculate the power to use in the right side
+        
+    int leftSpeed = forwardSpeed - turnSpeed;            //calculate the power to use in the left side 
+    int rightSpeed = forwardSpeed + turnSpeed;           //calculate the power to use in the right side
 
     int maxSpeed = std::max(abs(leftSpeed), abs(rightSpeed));  //find the maximum speed of the two sides
     if (maxSpeed > drivePower) {     //if the maximum speed is greater than 100, scale both sides down to be within the range of -100 to 100
@@ -346,8 +334,13 @@ void usercontrol(void) {
       }
     }
     else {
-      liftMotors.spin(forward, lift, percent);
-      liftWasMoving = true;    //if the lift is moving, set the variable to true
+      if ((lift > 0 && liftMotors.position(degrees) < liftMaxHeight) || (lift < 0 && liftMotors.position(degrees) > 0)) {
+        liftMotors.spin(forward, lift, percent);
+        liftWasMoving = true;    //if the lift is moving, set the variable to true
+      }
+      else {
+        liftMotors.stop();
+      }
     }
 
     if (wasPressed(Controller1.ButtonA.pressing(), buttonAPressed)) {  //if button A is pressed and released, toggle the arm position
@@ -365,7 +358,7 @@ void usercontrol(void) {
       if (clawOpen) {
         clawOpen = false;
         clawMotor.setMaxTorque(100, percent);
-        clawMotor.spinToPosition(100, degrees, 100, velocityUnits::pct, false);
+        clawMotor.spinToPosition(75, degrees, 100, velocityUnits::pct, false);
       }
       else {
         clawOpen = true;
@@ -375,32 +368,21 @@ void usercontrol(void) {
     }
 
     if (clawMotor.isDone()) {
-      clawMotor.setMaxTorque(40, percent);
+      clawMotor.setMaxTorque(30, percent);
     }
 
     displayScreen();
 
-    wait(20, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
+    wait(20, msec);
   }
 }
 
-//
-// Main will set up the competition functions and callbacks.
-//
 int main() {
-
-  
-  
-  // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
 
-
-  // Run the pre-autonomous function.
   pre_auton();
 
-  // Prevent main from exiting with an infinite loop.
   while (true) {
     wait(100, msec);
   }
