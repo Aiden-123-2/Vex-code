@@ -4,10 +4,10 @@ using namespace vex;
 
 //motor and controller setup
 
-motor leftFront(PORT11, ratio12_1, true);        //left motors
-motor leftBack(PORT12, ratio12_1, true);         //left motors are reversed because they are on the opposite side of the robot
-motor rightFront(PORT13, ratio12_1, false);      //right motors
-motor rightBack(PORT14, ratio12_1, false);
+motor leftFront(PORT11, ratio18_1, true);        //left motors
+motor leftBack(PORT12, ratio18_1, true);         //left motors are reversed because they are on the opposite side of the robot
+motor rightFront(PORT13, ratio18_1, false);      //right motors
+motor rightBack(PORT14, ratio18_1, false);
 
 motor_group leftDrive = {leftFront, leftBack};      //grouped together since motors on the same side should move the same direction
 motor_group rightDrive = {rightFront, rightBack};
