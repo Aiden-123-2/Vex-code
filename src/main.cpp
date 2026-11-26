@@ -273,6 +273,7 @@ void pre_auton(void) {
  ---- Robot measurements ----
 const double WHEEL_DIAMETER = 3.25;
 const double GEAR_RATIO = 48.0 / 36.0;   // 36 on motor, 48 on wheel
+const double TRACK_WIDTH = 12.75;
 
 double inchesToDegrees(double inches) {
   return inches / (WHEEL_DIAMETER * 3.14159) * 360.0 * GEAR_RATIO;
@@ -286,6 +287,9 @@ void driveInches(double inches, int speed) {
   rightDrive.spinFor(forward, deg, degrees, speed, velocityUnits::pct); 
 }
 
+void driveDegre(double angle, int maxSpeed){
+   double target = inchesToDegrees(TRACK_WIDTH * 3.14159 * angle / 360.0);
+}
 /*---------------------------------------------------------------------------*/
 /*                          Pre-Autonomous Functions                         */
 /*---------------------------------------------------------------------------*/
